@@ -494,6 +494,19 @@ void JobSystemThreadPool::QueueJobs(Job **inJobs, uint inNumJobs)
 // Sets the current thread name in MSVC debugger
 static void SetThreadName(const char *inName)
 {
+#ifdef __MINGW32__
+	// GCC does not support MSVC's __try/__except debugger notification.
+	// Resolve the Windows 10 API at runtime to keep older Windows compatible.
+	using SetThreadDescriptionFunction = HRESULT (WINAPI *)(HANDLE, PCWSTR);
+	auto set_thread_description = reinterpret_cast<SetThreadDescriptionFunction>(
+		GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "SetThreadDescription"));
+	if (set_thread_description != nullptr)
+	{
+		wchar_t name[64];
+		if (MultiByteToWideChar(CP_UTF8, 0, inName, -1, name, 64) > 0)
+			set_thread_description(GetCurrentThread(), name);
+	}
+#else
 	#pragma pack(push, 8)
 
 	struct THREADNAME_INFO
@@ -519,6 +532,7 @@ static void SetThreadName(const char *inName)
 	__except(EXCEPTION_EXECUTE_HANDLER)
 	{
 	}
+#endif
 }
 
 #endif

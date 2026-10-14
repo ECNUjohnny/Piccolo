@@ -3,6 +3,11 @@
 
 #pragma once
 
+#include <cfloat>
+#include <climits>
+#include <cstdint>
+#include <cstring>
+
 // Determine platform
 #if defined(JPH_PLATFORM_BLUE)
 	// Correct define already defined, this overrides everything else

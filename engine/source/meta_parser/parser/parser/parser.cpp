@@ -128,6 +128,9 @@ bool MetaParser::parseProject()
     for (auto include_item : inlcude_files)
     {
         std::string temp_string(include_item);
+        temp_string.erase(temp_string.find_last_not_of(" \t\r\n") + 1);
+        if (temp_string.empty())
+            continue;
         Utils::replace(temp_string, '\\', '/');
         include_file << "#include  \"" << temp_string << "\"" << std::endl;
     }
@@ -150,12 +153,21 @@ int MetaParser::parse(void)
     int is_show_errors      = m_is_show_errors ? 1 : 0;
     m_index                 = clang_createIndex(true, is_show_errors);
     std::string pre_include = "-I";
-    std::string sys_include_temp;
-    if (!(m_sys_include == "*"))
+    auto system_paths = Utils::split(m_sys_include, ";");
+    if (m_sys_include != "*" && m_sys_include != "auto")
     {
-        sys_include_temp = pre_include + m_sys_include;
-        arguments.emplace_back(sys_include_temp.c_str());
+        for (auto& path : system_paths)
+        {
+            arguments.emplace_back("-isystem");
+            arguments.emplace_back(path.c_str());
+        }
     }
+#if defined(__MINGW32__)
+    arguments.emplace_back("--target=x86_64-w64-windows-gnu");
+#endif
+#if defined(PICCOLO_CLANG_RESOURCE_DIR)
+    arguments.emplace_back("-resource-dir=" PICCOLO_CLANG_RESOURCE_DIR);
+#endif
 
     auto paths = m_work_paths;
     for (int index = 0; index < paths.size(); ++index)
@@ -174,6 +186,26 @@ int MetaParser::parse(void)
 
     m_translation_unit = clang_createTranslationUnitFromSourceFile(
         m_index, m_source_include_file_name.c_str(), static_cast<int>(arguments.size()), arguments.data(), 0, nullptr);
+    if (!m_translation_unit)
+    {
+        std::cerr << "Could not parse the reflection input." << std::endl;
+        return -3;
+    }
+    bool has_errors = false;
+    for (unsigned int index = 0; index < clang_getNumDiagnostics(m_translation_unit); ++index)
+    {
+        auto diagnostic = clang_getDiagnostic(m_translation_unit, index);
+        if (clang_getDiagnosticSeverity(diagnostic) >= CXDiagnostic_Error)
+        {
+            has_errors = true;
+            auto message = clang_formatDiagnostic(diagnostic, clang_defaultDiagnosticDisplayOptions());
+            std::cerr << clang_getCString(message) << std::endl;
+            clang_disposeString(message);
+        }
+        clang_disposeDiagnostic(diagnostic);
+    }
+    if (has_errors)
+        return -4;
     auto cursor = clang_getTranslationUnitCursor(m_translation_unit);
 
     Namespace temp_namespace;

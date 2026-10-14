@@ -13,8 +13,7 @@ int main(int argc, char* argv[])
     auto start_time = std::chrono::system_clock::now();
     int  result     = 0;
 
-    if (argv[1] != nullptr && argv[2] != nullptr && argv[3] != nullptr && argv[4] != nullptr && argv[5] != nullptr &&
-        argv[6] != nullptr)
+    if (argc == 7)
     {
         MetaParser::prepare();
 

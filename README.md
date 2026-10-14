@@ -21,7 +21,7 @@
 To build Piccolo, you must first install the following tools.
 
 ### Windows 10/11
-- Visual Studio 2019 (or more recent)
+- A 64-bit MinGW-w64 toolchain (GCC 9 or newer; GCC 13+ recommended) with `gcc`, `g++`, and `mingw32-make` on `PATH` (for **build_windows.bat**), or Visual Studio 2019 (or more recent) with **Desktop development with C++** and a **Windows 10/11 SDK**. MinGW GCC 8.1 has broken C++17 `<filesystem>` headers and cannot build the engine.
 - CMake 3.19 (or more recent)
 - Git 2.1 (or more recent)
 
@@ -53,11 +53,34 @@ sudo apt install mesa-vulkan-drivers
 ## Build Piccolo
 
 ### Build on Windows
-You may execute the **build_windows.bat**. This batch file will generate the projects, and build the **Release** config of **Piccolo Engine** automatically. After successful build, you can find the PiccoloEditor.exe at the **bin** directory.
+You may execute **build_windows.bat** to build with **MinGW g++**. It configures **build-mingw** with `MinGW Makefiles` and `CMAKE_BUILD_TYPE=Release`, then builds **Piccolo Engine**. After a successful build, you can find PiccoloEditor.exe in the **bin** directory. The separate build directory avoids conflicts with existing CMake caches.
 
-Or you can use the following command to generate the **Visual Studio** project firstly, then open the solution in the build directory and build it manually.
+From PowerShell, run `.\build_windows.bat Release` or `.\build_windows.bat Debug`. Passing a configuration skips the final pause and returns the build's exit code. The script uses four parallel build jobs by default; set `CMAKE_BUILD_PARALLEL_LEVEL` to change this.
+
+With MinGW Makefiles, `--config Release` alone does not select Release: use `-DCMAKE_BUILD_TYPE=Release` when configuring. The build copies the MinGW C++ runtime DLLs alongside the editor, so launching the built editor does not require adding MinGW to `PATH`.
+
+Portable MinGW-w64 packages are available from [WinLibs](https://winlibs.com/). Choose an **x86_64 / Win64, UCRT, POSIX, SEH** build and extract it to a path without spaces (for example, `D:\Software\DevTools\mingw64`). Installing it under `C:\Program Files` can cause GCC's linker to split the path to `default-manifest.o`. To select it without changing the system toolchain, use PowerShell:
+
+```powershell
+$env:PICCOLO_MINGW_ROOT = 'D:\Software\DevTools\mingw64' # directory containing bin\g++.exe
+.\build_windows.bat Release
 ```
-cmake -S . -B build
+
+When switching toolchains, rename the existing `build-mingw` directory first so CMake generates a clean build. The optional DirectX physics debug renderer still uses MSVC-specific build settings; leave `ENABLE_PHYSICS_DEBUG_RENDERER` off for MinGW.
+
+The reflection generator also needs a libclang runtime that can parse the selected compiler's standard library. The bundled Windows LLVM 7 runtime is too old for GCC 15. With a newer LLVM installation, set the following before the first configuration (or pass the same names as CMake `-D` options):
+
+```powershell
+$env:PICCOLO_LIBCLANG_RUNTIME = 'D:\LLVM\bin\libclang.dll'
+$env:PICCOLO_CLANG_RESOURCE_DIR = 'D:\LLVM\lib\clang\18' # contains include\stddef.h
+.\build_windows.bat Release
+```
+
+These paths are saved in the build directory's CMake cache. The generator uses the MinGW standard-library include paths and C++17, and stops on parsing errors instead of producing incomplete serializers. LLVM 14's Windows runtime with Clang 12 resource headers was also verified with GCC 15.3 on this project.
+
+Or use the following command for **Visual Studio 2022**, then open the solution in **build-windows** and build it manually.
+```
+cmake -S . -B build-windows -G "Visual Studio 17 2022" -A x64
 ```
 
 ### Build on macOS

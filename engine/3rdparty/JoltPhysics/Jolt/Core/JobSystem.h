@@ -142,7 +142,7 @@ protected:
 	{
 	public:
 		/// Constructor
-							Job([[maybe_unused]] const char *inJobName, [[maybe_unused]] ColorArg inColor, JobSystem *inJobSystem, const JobFunction &inJobFunction, uint32 inNumDependencies) : 
+							Job(const char *inJobName [[maybe_unused]], ColorArg inColor [[maybe_unused]], JobSystem *inJobSystem, const JobFunction &inJobFunction, uint32 inNumDependencies) :
 		#if defined(JPH_EXTERNAL_PROFILE) || defined(JPH_PROFILE_ENABLED)
 			mJobName(inJobName), 
 			mColor(inColor), 

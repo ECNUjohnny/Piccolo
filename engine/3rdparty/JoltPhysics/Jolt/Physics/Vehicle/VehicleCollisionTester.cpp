@@ -40,6 +40,8 @@ bool VehicleCollisionTesterRay::Collide(PhysicsSystem &inPhysicsSystem, uint inW
 				// Lock the body
 				BodyLockRead lock(mPhysicsSystem.GetBodyLockInterfaceNoLock(), inResult.mBodyID);
 				JPH_ASSERT(lock.Succeeded()); // When this runs all bodies are locked so this should not fail
+				if (!lock.Succeeded())
+					return;
 				const Body *body = &lock.GetBody();
 
 				if (body->IsSensor())
@@ -126,6 +128,8 @@ bool VehicleCollisionTesterCastSphere::Collide(PhysicsSystem &inPhysicsSystem, u
 				// Lock the body
 				BodyLockRead lock(mPhysicsSystem.GetBodyLockInterfaceNoLock(), inResult.mBodyID2);
 				JPH_ASSERT(lock.Succeeded()); // When this runs all bodies are locked so this should not fail
+				if (!lock.Succeeded())
+					return;
 				const Body *body = &lock.GetBody();
 
 				if (body->IsSensor())

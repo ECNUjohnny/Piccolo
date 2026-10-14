@@ -25,11 +25,28 @@ add_executable(${TARGET_NAME} ${HEADERS} ${SOURCES})
 
 set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD 17)
 set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Tools")
+set(PICCOLO_CLANG_RESOURCE_DIR "$ENV{PICCOLO_CLANG_RESOURCE_DIR}" CACHE PATH "Clang resource directory containing include/stddef.h")
+if(PICCOLO_CLANG_RESOURCE_DIR)
+    if(NOT EXISTS "${PICCOLO_CLANG_RESOURCE_DIR}/include/stddef.h")
+        message(FATAL_ERROR "PICCOLO_CLANG_RESOURCE_DIR must contain include/stddef.h")
+    endif()
+    target_compile_definitions(${TARGET_NAME} PRIVATE PICCOLO_CLANG_RESOURCE_DIR="${PICCOLO_CLANG_RESOURCE_DIR}")
+endif()
 
 if (CMAKE_HOST_WIN32)
     set(LLVM_LIBRARY_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/3rd_party/LLVM/lib/x64)
     set(LLVM_SHARED_LIBRARY_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/3rd_party/LLVM/bin/x64)
-    set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} /O2 /Ob2")
+    if(DEFINED ENV{PICCOLO_LIBCLANG_RUNTIME})
+        set(PICCOLO_LIBCLANG_RUNTIME "$ENV{PICCOLO_LIBCLANG_RUNTIME}" CACHE FILEPATH "Windows libclang runtime used for reflection parsing")
+    else()
+        set(PICCOLO_LIBCLANG_RUNTIME "${LLVM_SHARED_LIBRARY_DIR}/libclang.dll" CACHE FILEPATH "Windows libclang runtime used for reflection parsing")
+    endif()
+    if(NOT EXISTS "${PICCOLO_LIBCLANG_RUNTIME}")
+        message(FATAL_ERROR "PICCOLO_LIBCLANG_RUNTIME must point to libclang.dll")
+    endif()
+    if(MSVC)
+        set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} /O2 /Ob2")
+    endif()
     target_link_libraries(${TARGET_NAME}  ${LLVM_LIBRARY_DIR}/libclang.lib)
 elseif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
     set(LLVM_LIBRARY_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/3rd_party/LLVM/lib/Linux)
@@ -62,4 +79,10 @@ add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
 		"${LLVM_SHARED_LIBRARY_DIR}"
 		$<TARGET_FILE_DIR:${TARGET_NAME}>
 )
+if(CMAKE_HOST_WIN32)
+    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PICCOLO_LIBCLANG_RUNTIME}" "$<TARGET_FILE_DIR:${TARGET_NAME}>/libclang.dll"
+        VERBATIM
+    )
+endif()
 

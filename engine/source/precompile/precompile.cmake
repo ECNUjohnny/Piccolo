@@ -2,6 +2,16 @@
 set(PRECOMPILE_TOOLS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/bin")
 set(PICCOLO_PRECOMPILE_PARAMS_IN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/source/precompile/precompile.json.in")
 set(PICCOLO_PRECOMPILE_PARAMS_PATH "${PRECOMPILE_TOOLS_PATH}/precompile.json")
+# Parse only headers that declare reflected types. Unrelated implementation
+# headers can contain conflicting private types when combined in one unit.
+set(PICCOLO_REFLECTION_HEADS)
+foreach(header IN LISTS PICCOLO_RUNTIME_HEADS PICCOLO_EDITOR_HEADS)
+    file(STRINGS "${header}" reflection_declarations REGEX "^[ \t]*REFLECTION_TYPE\\(")
+    if(reflection_declarations)
+        list(APPEND PICCOLO_REFLECTION_HEADS "${header}")
+    endif()
+endforeach()
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${PICCOLO_RUNTIME_HEADS} ${PICCOLO_EDITOR_HEADS})
 configure_file(${PICCOLO_PRECOMPILE_PARAMS_IN_PATH} ${PICCOLO_PRECOMPILE_PARAMS_PATH})
 
 #
@@ -9,7 +19,10 @@ configure_file(${PICCOLO_PRECOMPILE_PARAMS_IN_PATH} ${PICCOLO_PRECOMPILE_PARAMS_
 if (CMAKE_HOST_WIN32)
     set(PRECOMPILE_PRE_EXE)
 	set(PRECOMPILE_PARSER ${PRECOMPILE_TOOLS_PATH}/PiccoloParser.exe)
-    set(sys_include "*") 
+    set(sys_include "auto")
+    if(MINGW)
+        set(sys_include "${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES}")
+    endif()
 elseif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux" )
     set(PRECOMPILE_PRE_EXE)
 	set(PRECOMPILE_PARSER ${PRECOMPILE_TOOLS_PATH}/PiccoloParser)
@@ -33,6 +46,7 @@ elseif(CMAKE_HOST_APPLE)
 endif()
 
 set (PARSER_INPUT ${CMAKE_BINARY_DIR}/parser_header.h)
+set(PARSER_INCLUDE_PATHS "${ENGINE_ROOT_DIR}/source;$<TARGET_PROPERTY:PiccoloRuntime,INCLUDE_DIRECTORIES>")
 ### BUILDING ====================================================================================
 set(PRECOMPILE_TARGET "PiccoloPreCompile")
 
@@ -52,8 +66,9 @@ COMMAND
   ${CMAKE_COMMAND} -E echo "************************************************************* "
 
 COMMAND
-    ${PRECOMPILE_PARSER} "${PICCOLO_PRECOMPILE_PARAMS_PATH}"  "${PARSER_INPUT}"  "${ENGINE_ROOT_DIR}/source" ${sys_include} "Piccolo" 0
+    ${PRECOMPILE_PARSER} "${PICCOLO_PRECOMPILE_PARAMS_PATH}" "${PARSER_INPUT}" "${PARSER_INCLUDE_PATHS}" "${sys_include}" "Piccolo" 0
 ### BUILDING ====================================================================================
 COMMAND
     ${CMAKE_COMMAND} -E echo "+++ Precompile finished +++"
+VERBATIM
 )

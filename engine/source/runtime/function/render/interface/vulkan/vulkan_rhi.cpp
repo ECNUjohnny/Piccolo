@@ -11,7 +11,7 @@
 #define PICCOLO_XSTR(s) PICCOLO_STR(s)
 #define PICCOLO_STR(s) #s
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && !defined(_WIN32)
 // https://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html
 #if defined(__linux__)
 #include <stdlib.h>
@@ -21,7 +21,7 @@
 #else
 #error Unknown Platform
 #endif
-#elif defined(_MSC_VER)
+#elif defined(_WIN32)
 // https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros
 #include <sdkddkver.h>
 #define WIN32_LEAN_AND_MEAN 1
@@ -104,7 +104,7 @@ namespace Piccolo
         m_enable_point_light_shadow = true;
 #endif
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && !defined(_WIN32)
         // https://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html
 #if defined(__linux__)
         char const* vk_layer_path = PICCOLO_XSTR(PICCOLO_VK_LAYER_PATH);
@@ -118,7 +118,7 @@ namespace Piccolo
 #else
 #error Unknown Platform
 #endif
-#elif defined(_MSC_VER)
+#elif defined(_WIN32)
         // https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros
         char const* vk_layer_path = PICCOLO_XSTR(PICCOLO_VK_LAYER_PATH);
         SetEnvironmentVariableA("VK_LAYER_PATH", vk_layer_path);

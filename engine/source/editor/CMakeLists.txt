@@ -22,6 +22,21 @@ target_compile_options(${TARGET_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:
 
 target_link_libraries(${TARGET_NAME} PiccoloRuntime)
 
+if(MINGW)
+  get_filename_component(MINGW_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+  file(GLOB MINGW_RUNTIME_DLLS
+    "${MINGW_BIN_DIR}/libstdc++-6.dll"
+    "${MINGW_BIN_DIR}/libgcc_s_*.dll"
+    "${MINGW_BIN_DIR}/libwinpthread-1.dll"
+  )
+  if(MINGW_RUNTIME_DLLS)
+    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${MINGW_RUNTIME_DLLS} "$<TARGET_FILE_DIR:${TARGET_NAME}>"
+      VERBATIM
+    )
+  endif()
+endif()
+
 set(POST_BUILD_COMMANDS
   COMMAND ${CMAKE_COMMAND} -E make_directory "${BINARY_ROOT_DIR}"
   COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/resource" "${BINARY_ROOT_DIR}/resource"
@@ -41,8 +56,8 @@ if(ENABLE_PHYSICS_DEBUG_RENDERER)
 )
 endif()
 
-add_custom_command(TARGET ${TARGET_NAME} ${POST_BUILD_COMMANDS})
+add_custom_command(TARGET ${TARGET_NAME} POST_BUILD ${POST_BUILD_COMMANDS})
 
 #precompile
 #set global vari used by precompile
-set(PICCOLO_EDITOR_HEADS “${EDITOR_HEADERS}” PARENT_SCOPE)
+set(PICCOLO_EDITOR_HEADS "${EDITOR_HEADERS}" PARENT_SCOPE)
