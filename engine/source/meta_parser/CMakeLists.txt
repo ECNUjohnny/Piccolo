@@ -12,8 +12,8 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${HEADERS} ${SOURCES})
 
 
 set(LLVM_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/3rd_party/LLVM/include ${CMAKE_CURRENT_SOURCE_DIR}/3rd_party/mustache ${CMAKE_CURRENT_SOURCE_DIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${ENGINE_ROOT_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${ENGINE_ROOT_DIR}/bin)
+# Keep each build tree and configuration's parser and libclang together.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin/$<CONFIG>")
 # add LLVM includes
 include_directories(${LLVM_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/parser)
 
@@ -72,16 +72,18 @@ endif()
 
 add_definitions(-DTIXML_USE_STL)
 
-# copy resources on post build
-add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-	# mustache templates directory
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
-		"${LLVM_SHARED_LIBRARY_DIR}"
-		$<TARGET_FILE_DIR:${TARGET_NAME}>
-)
 if(CMAKE_HOST_WIN32)
-    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+    # Refresh the selected DLL even when the parser does not need relinking.
+    add_custom_target(PiccoloParserRuntime
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PICCOLO_LIBCLANG_RUNTIME}" "$<TARGET_FILE_DIR:${TARGET_NAME}>/libclang.dll"
+        DEPENDS ${TARGET_NAME}
+        VERBATIM
+    )
+else()
+    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${LLVM_SHARED_LIBRARY_DIR}"
+            "$<TARGET_FILE_DIR:${TARGET_NAME}>"
         VERBATIM
     )
 endif()

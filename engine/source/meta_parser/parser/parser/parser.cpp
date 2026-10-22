@@ -150,6 +150,9 @@ int MetaParser::parse(void)
     }
 
     std::cerr << "Parsing the whole project..." << std::endl;
+    auto clang_version = clang_getClangVersion();
+    std::cout << "Reflection parser libclang: " << clang_getCString(clang_version) << std::endl;
+    clang_disposeString(clang_version);
     int is_show_errors      = m_is_show_errors ? 1 : 0;
     m_index                 = clang_createIndex(true, is_show_errors);
     std::string pre_include = "-I";

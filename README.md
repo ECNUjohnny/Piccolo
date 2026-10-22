@@ -78,6 +78,15 @@ $env:PICCOLO_CLANG_RESOURCE_DIR = 'D:\LLVM\lib\clang\18' # contains include\stdd
 
 These paths are saved in the build directory's CMake cache. The generator uses the MinGW standard-library include paths and C++17, and stops on parsing errors instead of producing incomplete serializers. LLVM 14's Windows runtime with Clang 12 resource headers was also verified with GCC 15.3 on this project.
 
+For an existing build directory, update both cached paths explicitly:
+
+```powershell
+cmake -S . -B build '-DPICCOLO_LIBCLANG_RUNTIME=D:/LLVM/bin/libclang.dll' '-DPICCOLO_CLANG_RESOURCE_DIR=D:/LLVM/lib/clang/18'
+cmake --build build --parallel 4
+```
+
+Use your installed LLVM paths and replace `build` with the build directory you use. An `alloc_align` error in the standard library's `<new>` header during `PiccoloPreCompile` can indicate an outdated libclang; the parser prints its loaded libclang version. Parser executables and DLLs are stored separately in each build tree and configuration to prevent builds from overwriting one another's parser runtime.
+
 Or use the following command for **Visual Studio 2022**, then open the solution in **build-windows** and build it manually.
 ```
 cmake -S . -B build-windows -G "Visual Studio 17 2022" -A x64
